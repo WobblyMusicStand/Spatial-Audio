@@ -1,4 +1,4 @@
-package net.fabricmc.example;
+package net.spatial.audio;
 
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.block.BlockState;
@@ -27,7 +27,14 @@ import net.fabricmc.ex
 import net.minecraft.world.RaycastContext;
  */
 
-public class ExampleMod implements ModInitializer {
+
+/**
+ * This is the main class for Spatial Audio. It contains the callbacks that are mixed into the minecraft source code.
+ * These trigger all the raycasting calculation for occlusion.
+ */
+
+
+public class SpatialAudio implements ModInitializer {
 	private static MinecraftClient mcInstance;
 
 	@Override
@@ -45,34 +52,40 @@ public class ExampleMod implements ModInitializer {
 
 	public static void init(){
 		mcInstance = MinecraftClient.getInstance();
-		System.out.println("Initializing Sound Plugin...");
+		System.out.println("Initializing Spatial Audio...");
+		System.out.println("Spatial Audio Initialized");
 	}
 
 	/*Test of simple audio "shading" modification. Calculates the # blocks between source and listener and decreases volume accordingly.*/
+	//TODO Initialize accumulator which increases in attenuation based on the "absorption" of the block that is encountered.
+	//TODO Pass back accumulated attenuation to the SoundManager to decrease the play volume associated with each sound.
 	public static void occlusion(SoundInstance sound){
-	   /* PlayerEntity player = mcInstance.player;
+	    PlayerEntity player = mcInstance.player;
 	    World world = mcInstance.world;
-        Vec3d playerPos;
+        Vec3d playerPos; //TODO place playerPos at player head height, not feet
+		//player.getStandingEyeHeight();
 
+        //todo get distance from sound source
 	    try {
-            playerPos = player.getPos();
+	    	//playerPos = player.getPos();
+            playerPos = new Vec3d(player.getX(), player.getY()+player.getStandingEyeHeight(), player.getZ());
             Vec3d soundPos = new Vec3d(sound.getX(), sound.getY(), sound.getZ());
             BlockHitResult bk = world.raycast(new RaycastContext(soundPos, playerPos, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.ANY, player));
             HitResult.Type type = bk.getType();
             //while ()
             if (type != HitResult.Type.BLOCK) {
-                System.out.println("No blocks between " + sound.getId() + "and listener");
+                System.out.println("No blocks between " + sound.getId() + " and listener");
             } else {
                 BlockState hit = world.getBlockState(bk.getBlockPos());
-                System.out.println("Hit block between sound source and player " +  hit.getSoundGroup() + " at " + bk.getBlockPos());
+                BlockEntity ht = world.getBlockEntity(bk.getBlockPos());
+                //hit.getBlock().getName()
+						// hit.getSoundGroup()
+                System.out.println("Block between " + sound.getId() + " and listener " + playerPos + ": " +  /*it.getBlock() +*/ " at " + bk.getBlockPos());
             }
             //BlockView.raycast();
 
         } catch (NullPointerException e) {
 	        //yeet
         }
-*/
-
-
 	}
 }
