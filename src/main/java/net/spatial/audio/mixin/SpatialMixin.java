@@ -25,6 +25,11 @@ public class SpatialMixin {
 		SpatialAudio.init();
 	}
 
+	/**
+	 * TODO Update Mixin to set volume based on attenuation score received occlusion from helper function.
+	 * @param sound
+	 * @param info
+	 */
 	@Inject(at = @At("HEAD"), method = "play(Lnet/minecraft/client/sound/SoundInstance;)V", cancellable = true)
 	private void playOnce(SoundInstance sound, CallbackInfo info) {
 		System.out.println("Sound Playing: " +sound.getId());
