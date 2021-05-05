@@ -18,6 +18,8 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import org.apache.commons.lang3.ObjectUtils;
+
+import java.lang.invoke.SwitchPoint;
 /*
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.sound.SoundManager;
@@ -68,41 +70,87 @@ public class SpatialAudio implements ModInitializer {
 	public static void occlusion(SoundInstance sound){
 	    PlayerEntity player = mcInstance.player;
 	    World world = mcInstance.world;
-        Vec3d playerPos; //TODO place playerPos at player head height, not feet
-		//player.getStandingEyeHeight();
+        Vec3d playerPos; //DONE place playerPos at player head height, not feet
 
 
-	    try {
-			//DONE place playerPos at player head height, not feet, uses getStandingEyeHeight which accounts for the current player pose (crouch, crawl, fly..etc)
-            playerPos = new Vec3d(player.getX(), player.getY() + player.getStandingEyeHeight(), player.getZ());
-            Vec3d soundPos = new Vec3d(sound.getX()-0.5, sound.getY(), sound.getZ()-0.5);
+		if(world != null){
+			try {
+				//DONE place playerPos at player head height, not feet, uses getStandingEyeHeight which accounts for the current player pose (crouch, crawl, fly..etc)
+				playerPos = new Vec3d(player.getX(), player.getY() + player.getStandingEyeHeight(), player.getZ());
+				Vec3d soundPos = new Vec3d(sound.getX()-0.5, sound.getY(), sound.getZ()-0.5); //move sound start to center of block
 
-			/**
-			 * Vector from soundsource to player (P-S)
-			 * TODO update soundsouce position to be on the edge (or outside of) the block it "starts in" in the direction of the player.
-			 */
-            //playerPos.subtract(soundPos);
-			//Vec3d soundTowardsPlayer = new Vec3d();
 
-			/**
-			 * TODO loop over all blocks between sound source and player and accumulate their total attenuation
-			 */
-            BlockHitResult bk = world.raycast(new RaycastContext(soundPos, playerPos, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.ANY, player));
-            HitResult.Type type = bk.getType();
-            if (type != HitResult.Type.BLOCK) {
-                System.out.println("No blocks between " + sound.getId() + " and listener");
-            } else {
-                BlockState hit = world.getBlockState(bk.getBlockPos());
-                BlockEntity ht = world.getBlockEntity(bk.getBlockPos());
-                //hit.getBlock().getName()
-				// hit.getSoundGroup()
-                System.out.println("Block between " + sound.getId() + " and listener " + playerPos + ": " + hit.getBlock().getName() + " at " + bk.getBlockPos());
-            }
-            //TODO pass back accumulated total of blocks hits and adjust sound volume accordingly.
-			//IE blocks behind a thick wall of wool/stone should be much quieter than ones with nothing in between
+				/**
+				 * Vector from soundsource to player (P-S)
+				 * DONE update soundsouce position to be on the edge (or outside of) the block it "starts in" in the direction of the player.
+				 * 0.866025403784 is half the length of the 3D unit vector, this accounts for the worst (corner) case, and in all other will move "into the block" adjacent
+				 * Shouldn't cause issues. The more precise alternative would be to move the starting point to the "edge" of the block along the raycasting vector.
+				 */
+				Vec3d soundToPlayer = playerPos.subtract(soundPos).normalize();
+				Vec3d sourcePos = soundPos.add(soundToPlayer.multiply(0.866025403784));
 
-        } catch (NullPointerException e) {
-	        //yeet
-        }
+				/**
+				 * TODO loop over all blocks between sound source and player and accumulate their total attenuation
+				 */
+				Integer numCollisions = 0;
+				Boolean collision = true;
+
+				do{
+					BlockHitResult bk = world.raycast(new RaycastContext(sourcePos, playerPos, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.ANY, player));
+					HitResult.Type type = bk.getType();
+
+					if (type != HitResult.Type.BLOCK) {
+						System.out.println("No blocks between " + sound.getId() + " and listener");
+						collision = false;
+					} else {
+						BlockState hit = world.getBlockState(bk.getBlockPos());
+						System.out.println("Block between " + sound.getId() + " and listener: " + getSoundType(hit) + " at " + bk.getBlockPos());
+						//TODO change this adjustment so it will move by 1 block towards the player, currently it will move unit length, which is nearly 2 blocks (1.77)
+						sourcePos = sourcePos.add(soundToPlayer); //move the starting position by one unit length towards the player.
+						numCollisions++;
+						collision = true;
+					}
+
+				}while(collision == true);
+				//TODO pass back accumulated total of blocks hits and adjust sound volume accordingly.
+				//IE blocks behind a thick wall of wool/stone should be much quieter than ones with nothing in between
+				System.out.println("Number of blocks between " + sound.getId() + " and listener: " + numCollisions);
+
+			} catch (NullPointerException e) {
+				//yeet
+			}
+		}
+	}
+
+	//TODO use Block.getSoundGroup() to manage the acousticProperties of certain blocks.
+	public static String getSoundType(BlockState blockState){
+		BlockSoundGroup soundGroup = blockState.getBlock().getSoundGroup(blockState);
+
+		if (soundGroup == BlockSoundGroup.WOOD){
+			return "WOOD";
+		}else if(soundGroup == BlockSoundGroup.GRAVEL){
+			return  "GRAVEL";
+		}else if(soundGroup == BlockSoundGroup.GRASS){
+			return  "GRASS";
+		}else if(soundGroup == BlockSoundGroup.LILY_PAD){
+			return  "LILY_PAD";
+		}else if(soundGroup == BlockSoundGroup.STONE){
+			return  "STONE";
+		}else if(soundGroup == BlockSoundGroup.METAL){
+			return  "METAL";
+		}else if(soundGroup == BlockSoundGroup.GLASS){
+			return  "GLASS";
+		}else if(soundGroup == BlockSoundGroup.WOOL){
+			return  "WOOL";
+		}else if(soundGroup == BlockSoundGroup.SAND){
+			return  "SAND";
+		}else if(soundGroup == BlockSoundGroup.SNOW){
+			return  "SNOW";
+		}else if(soundGroup == BlockSoundGroup.LADDER){
+			return  "LADDER";
+		}else if(soundGroup == BlockSoundGroup.ANVIL){
+			return  "ANVIL";
+		}
+		return "error";
 	}
 }

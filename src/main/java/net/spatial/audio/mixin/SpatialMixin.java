@@ -32,7 +32,7 @@ public class SpatialMixin {
 	 */
 	@Inject(at = @At("HEAD"), method = "play(Lnet/minecraft/client/sound/SoundInstance;)V", cancellable = true)
 	private void playOnce(SoundInstance sound, CallbackInfo info) {
-		System.out.println("Sound Playing: " +sound.getId());
+		//System.out.println("Sound Playing: " +sound.getId());
 		if (sound.getCategory() == SoundCategory.BLOCKS){
 			System.out.println("Currently Playing " + sound.getId() + " " + sound.getCategory() + " at " + sound.getX() + " " + sound.getY() + " " + sound.getZ());
 			SpatialAudio.occlusion(sound);
