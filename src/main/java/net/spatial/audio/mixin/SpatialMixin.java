@@ -1,5 +1,6 @@
 package net.spatial.audio.mixin;
 
+import net.minecraft.client.sound.SoundSystem;
 import net.spatial.audio.SpatialAudio;
 import net.minecraft.client.options.GameOptions;
 import net.minecraft.client.sound.SoundInstance;
@@ -32,10 +33,11 @@ public class SpatialMixin {
 	 */
 	@Inject(at = @At("HEAD"), method = "play(Lnet/minecraft/client/sound/SoundInstance;)V", cancellable = true)
 	private void playOnce(SoundInstance sound, CallbackInfo info) {
+		int AttenuationScore;
 		//System.out.println("Sound Playing: " +sound.getId());
 		if (sound.getCategory() == SoundCategory.BLOCKS){
 			System.out.println("Currently Playing " + sound.getId() + " " + sound.getCategory() + " at " + sound.getX() + " " + sound.getY() + " " + sound.getZ());
-			SpatialAudio.occlusion(sound);
+			AttenuationScore = SpatialAudio.occlusion(sound);
 			//info.soundSystem.play(sound);
 		}
 		//info.cancel();
@@ -55,5 +57,6 @@ public class SpatialMixin {
 
 	}
 }
+
 
 

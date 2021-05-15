@@ -2,24 +2,15 @@ package net.spatial.audio;
 
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Material;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.BlockView;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
-import org.apache.commons.lang3.ObjectUtils;
-
-import java.lang.invoke.SwitchPoint;
 /*
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.sound.SoundManager;
@@ -53,7 +44,7 @@ public class SpatialAudio implements ModInitializer {
 	}
 
 	/**
-	 * TODO Intialize data structures and additional OpenAL sound players here. (Needed for reverb effects)
+	 * TODO Initialize data structures and additional OpenAL buffers/AFX modules here. (Needed for reverb effects)
 	 *
 	 */
 	public static void init(){
@@ -65,9 +56,10 @@ public class SpatialAudio implements ModInitializer {
 	/**Test of simple audio "shading" modification. Calculates the # blocks between source and listener and decreases volume accordingly.
 	 * TODO Initialize accumulator which increases in attenuation based on the "absorption" of the block that is encountered.
 	 * TODO Pass back accumulated attenuation to the SoundManager to decrease the play volume associated with each sound.
-	 * TODO Refactor into helper function.
+	 * TODO Refactor into separate physics class.
 	 */
-	public static void occlusion(SoundInstance sound){
+	public static int occlusion(SoundInstance sound){
+		int occlusionScore = 0;
 	    PlayerEntity player = mcInstance.player;
 	    World world = mcInstance.world;
         Vec3d playerPos; //DONE place playerPos at player head height, not feet
@@ -87,7 +79,7 @@ public class SpatialAudio implements ModInitializer {
 				 * Shouldn't cause issues. The more precise alternative would be to move the starting point to the "edge" of the block along the raycasting vector.
 				 */
 				Vec3d soundToPlayer = playerPos.subtract(soundPos).normalize();
-				Vec3d sourcePos = soundPos.add(soundToPlayer.multiply(0.866025403784));
+				Vec3d raySource = soundPos.add(soundToPlayer.multiply(0.866025403784));
 
 				/**
 				 * TODO loop over all blocks between sound source and player and accumulate their total attenuation
@@ -96,7 +88,7 @@ public class SpatialAudio implements ModInitializer {
 				Boolean collision = true;
 
 				do{
-					BlockHitResult bk = world.raycast(new RaycastContext(sourcePos, playerPos, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.ANY, player));
+					BlockHitResult bk = world.raycast(new RaycastContext(raySource, playerPos, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.ANY, player));
 					HitResult.Type type = bk.getType();
 
 					if (type != HitResult.Type.BLOCK) {
@@ -104,9 +96,11 @@ public class SpatialAudio implements ModInitializer {
 						collision = false;
 					} else {
 						BlockState hit = world.getBlockState(bk.getBlockPos());
-						System.out.println("Block between " + sound.getId() + " and listener: " + getSoundType(hit) + " at " + bk.getBlockPos());
-						//TODO change this adjustment so it will move by 1 block towards the player, currently it will move unit length, which is nearly 2 blocks (1.77)
-						sourcePos = sourcePos.add(soundToPlayer); //move the starting position by one unit length towards the player.
+						System.out.println("Block between " + sound.getId() + " and listener: " + getSoundType(hit) + " at " + bk.getPos());
+						//DONE change this adjustment so it will move to the edge of the struck block towards the player, currently it will move one block at a time
+						// IE:  skip ray traces over large gaps and will strike the each block once.
+						raySource = bk.getPos().add(soundToPlayer); //move the starting position towards the "player side" of the rayCast Hit block. Vector aligned.
+						//raySource = raySource.add;
 						numCollisions++;
 						collision = true;
 					}
@@ -115,11 +109,14 @@ public class SpatialAudio implements ModInitializer {
 				//TODO pass back accumulated total of blocks hits and adjust sound volume accordingly.
 				//IE blocks behind a thick wall of wool/stone should be much quieter than ones with nothing in between
 				System.out.println("Number of blocks between " + sound.getId() + " and listener: " + numCollisions);
+				occlusionScore = numCollisions;
 
 			} catch (NullPointerException e) {
 				//yeet
 			}
 		}
+
+		return occlusionScore;
 	}
 
 	//TODO use Block.getSoundGroup() to manage the acousticProperties of certain blocks.
