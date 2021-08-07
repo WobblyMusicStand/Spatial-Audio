@@ -54,12 +54,15 @@ public class SpatialAudio implements ModInitializer {
 	}
 
 	/**Test of simple audio "shading" modification. Calculates the # blocks between source and listener and decreases volume accordingly.
-	 * TODO Initialize accumulator which increases in attenuation based on the "absorption" of the block that is encountered.
-	 * TODO Pass back accumulated attenuation to the SoundManager to decrease the play volume associated with each sound.
-	 * TODO Refactor into separate physics class.
+	 * DONE Initialize accumulator which increases in attenuation based on the "absorption" of the block that is encountered.
+	 * DONE Pass back accumulated attenuation to the SoundManager to decrease the play volume associated with each sound.
+	 * TODO Do something with the attenuation score to reduce the playback volume based on obstables.
+	 * TODO-Possible Refactor into separate physics class.
 	 */
 	public static int occlusion(SoundInstance sound){
 		int occlusionScore = 0;
+		int numCollisions = 0;
+		boolean collision = true;
 	    PlayerEntity player = mcInstance.player;
 	    World world = mcInstance.world;
         Vec3d playerPos; //DONE place playerPos at player head height, not feet
@@ -81,35 +84,30 @@ public class SpatialAudio implements ModInitializer {
 				Vec3d soundToPlayer = playerPos.subtract(soundPos).normalize();
 				Vec3d raySource = soundPos.add(soundToPlayer.multiply(0.866025403784));
 
-				/**
-				 * TODO loop over all blocks between sound source and player and accumulate their total attenuation
-				 */
-				Integer numCollisions = 0;
-				Boolean collision = true;
-
+				//Loop over all blocks between sound source and player and accumulate their total attenuation
 				do{
 					BlockHitResult bk = world.raycast(new RaycastContext(raySource, playerPos, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.ANY, player));
 					HitResult.Type type = bk.getType();
 
 					if (type != HitResult.Type.BLOCK) {
-						System.out.println("No blocks between " + sound.getId() + " and listener");
+						//System.out.println("No blocks between " + sound.getId() + " and listener");
 						collision = false;
 					} else {
 						BlockState hit = world.getBlockState(bk.getBlockPos());
-						System.out.println("Block between " + sound.getId() + " and listener: " + getSoundType(hit) + " at " + bk.getPos());
+
+						occlusionScore += getSoundType(hit).getAbsorption();
+
+						System.out.println("Block between " + sound.getId() + " and listener: " + getSoundType(hit).getName() + " at " + bk.getPos());
 						//DONE change this adjustment so it will move to the edge of the struck block towards the player, currently it will move one block at a time
 						// IE:  skip ray traces over large gaps and will strike the each block once.
 						raySource = bk.getPos().add(soundToPlayer); //move the starting position towards the "player side" of the rayCast Hit block. Vector aligned.
 						//raySource = raySource.add;
 						numCollisions++;
-						collision = true;
 					}
+				}while(collision);
 
-				}while(collision == true);
-				//TODO pass back accumulated total of blocks hits and adjust sound volume accordingly.
 				//IE blocks behind a thick wall of wool/stone should be much quieter than ones with nothing in between
 				System.out.println("Number of blocks between " + sound.getId() + " and listener: " + numCollisions);
-				occlusionScore = numCollisions;
 
 			} catch (NullPointerException e) {
 				//yeet
@@ -119,35 +117,35 @@ public class SpatialAudio implements ModInitializer {
 		return occlusionScore;
 	}
 
-	//TODO use Block.getSoundGroup() to manage the acousticProperties of certain blocks.
-	public static String getSoundType(BlockState blockState){
+	//TODO Move this function to the correct owning class, likely BlockSoundProperties. Since it is a static function.
+	public static BlockSoundProperties getSoundType(BlockState blockState){
 		BlockSoundGroup soundGroup = blockState.getBlock().getSoundGroup(blockState);
 
 		if (soundGroup == BlockSoundGroup.WOOD){
-			return "WOOD";
+			return BlockSoundProperties.WOOD;
 		}else if(soundGroup == BlockSoundGroup.GRAVEL){
-			return  "GRAVEL";
+			return  BlockSoundProperties.GRAVEL;
 		}else if(soundGroup == BlockSoundGroup.GRASS){
-			return  "GRASS";
+			return  BlockSoundProperties.GRASS;
 		}else if(soundGroup == BlockSoundGroup.LILY_PAD){
-			return  "LILY_PAD";
+			return  BlockSoundProperties.LILY_PAD;
 		}else if(soundGroup == BlockSoundGroup.STONE){
-			return  "STONE";
+			return  BlockSoundProperties.STONE;
 		}else if(soundGroup == BlockSoundGroup.METAL){
-			return  "METAL";
+			return  BlockSoundProperties.METAL;
 		}else if(soundGroup == BlockSoundGroup.GLASS){
-			return  "GLASS";
+			return  BlockSoundProperties.GLASS;
 		}else if(soundGroup == BlockSoundGroup.WOOL){
-			return  "WOOL";
+			return  BlockSoundProperties.WOOL;
 		}else if(soundGroup == BlockSoundGroup.SAND){
-			return  "SAND";
+			return  BlockSoundProperties.SAND;
 		}else if(soundGroup == BlockSoundGroup.SNOW){
-			return  "SNOW";
+			return  BlockSoundProperties.SNOW;
 		}else if(soundGroup == BlockSoundGroup.LADDER){
-			return  "LADDER";
+			return  BlockSoundProperties.LADDER;
 		}else if(soundGroup == BlockSoundGroup.ANVIL){
-			return  "ANVIL";
+			return  BlockSoundProperties.ANVIL;
 		}
-		return "error";
+		return BlockSoundProperties.AIR;
 	}
 }
